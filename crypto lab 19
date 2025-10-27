@@ -1,0 +1,50 @@
+from base64 import b64encode, b64decode
+
+def xor_bytes(a, b):
+    """XOR two byte arrays"""
+    return bytes(x ^ y for x, y in zip(a, b))
+
+def simple_encrypt_block(block, key):
+    """Fake block encryption (simulated 3DES step for demonstration)"""
+    return xor_bytes(block, key[:len(block)])
+
+def encrypt_cbc(plaintext, key, iv):
+    block_size = len(iv)
+    plaintext_bytes = plaintext.encode()
+    
+    # Pad manually to multiple of block size
+    while len(plaintext_bytes) % block_size != 0:
+        plaintext_bytes += b' '
+    
+    ciphertext = b''
+    prev = iv
+    for i in range(0, len(plaintext_bytes), block_size):
+        block = plaintext_bytes[i:i+block_size]
+        xored = xor_bytes(block, prev)
+        encrypted = simple_encrypt_block(xored, key)
+        ciphertext += encrypted
+        prev = encrypted
+    return ciphertext
+
+def decrypt_cbc(ciphertext, key, iv):
+    block_size = len(iv)
+    plaintext = b''
+    prev = iv
+    for i in range(0, len(ciphertext), block_size):
+        block = ciphertext[i:i+block_size]
+        decrypted = simple_encrypt_block(block, key)
+        xored = xor_bytes(decrypted, prev)
+        plaintext += xored
+        prev = block
+    return plaintext.decode().rstrip()
+
+if __name__ == "__main__":
+    key = b"my3deskey1234567"
+    iv = b"12345678"
+    plaintext = "This is a CBC demo message"
+    
+    ciphertext = encrypt_cbc(plaintext, key, iv)
+    print("🧩 Ciphertext (base64):", b64encode(ciphertext).decode())
+    
+    decrypted = decrypt_cbc(ciphertext, key, iv)
+    print("✅ Decrypted text:", decrypted)
