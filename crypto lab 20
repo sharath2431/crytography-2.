@@ -1,0 +1,77 @@
+import random
+
+# Helper functions
+def xor_bytes(a, b):
+    return bytes([x ^ y for x, y in zip(a, b)])
+
+def simulate_ecb(plaintext_blocks, key):
+    ciphertext_blocks = []
+    for block in plaintext_blocks:
+        # simple "encryption" by XORing with key
+        ciphertext_blocks.append(xor_bytes(block, key))
+    return ciphertext_blocks
+
+def simulate_cbc(plaintext_blocks, key, iv):
+    ciphertext_blocks = []
+    prev = iv
+    for block in plaintext_blocks:
+        # CBC: XOR plaintext with previous ciphertext (or IV for first block)
+        xored = xor_bytes(block, prev)
+        cipher_block = xor_bytes(xored, key)
+        ciphertext_blocks.append(cipher_block)
+        prev = cipher_block
+    return ciphertext_blocks
+
+def simulate_decryption_ecb(ciphertext_blocks, key):
+    plaintext_blocks = []
+    for block in ciphertext_blocks:
+        plaintext_blocks.append(xor_bytes(block, key))
+    return plaintext_blocks
+
+def simulate_decryption_cbc(ciphertext_blocks, key, iv):
+    plaintext_blocks = []
+    prev = iv
+    for block in ciphertext_blocks:
+        xored = xor_bytes(block, key)
+        plaintext = xor_bytes(xored, prev)
+        plaintext_blocks.append(plaintext)
+        prev = block
+    return plaintext_blocks
+
+# --- MAIN PROGRAM ---
+block_size = 8
+key = bytes([random.randint(0, 255) for _ in range(block_size)])
+iv = bytes([random.randint(0, 255) for _ in range(block_size)])
+
+# Create sample plaintext split into 3 blocks
+plaintext = [b"Sharath1", b"Sharath2", b"Sharath3"]
+
+# ECB Mode
+ecb_cipher = simulate_ecb(plaintext, key)
+print("ECB Ciphertext (original):", ecb_cipher)
+
+# Introduce error in 1st block
+ecb_cipher_error = ecb_cipher.copy()
+ecb_cipher_error[0] = bytes([b ^ 1 for b in ecb_cipher_error[0]])
+
+# Decrypt with error
+ecb_decrypted_error = simulate_decryption_ecb(ecb_cipher_error, key)
+print("ECB Decrypted with error:", ecb_decrypted_error)
+
+# CBC Mode
+cbc_cipher = simulate_cbc(plaintext, key, iv)
+print("\nCBC Ciphertext (original):", cbc_cipher)
+
+# Introduce error in 1st block
+cbc_cipher_error = cbc_cipher.copy()
+cbc_cipher_error[0] = bytes([b ^ 1 for b in cbc_cipher_error[0]])
+
+# Decrypt with error
+cbc_decrypted_error = simulate_decryption_cbc(cbc_cipher_error, key, iv)
+print("CBC Decrypted with error:", cbc_decrypted_error)
+
+# --- THEORY ANSWERS ---
+print("\nTheory:")
+print("a) In CBC mode, error in C1 affects only P1 and P2 — blocks beyond P2 are NOT affected.")
+print("b) If there's a bit error in P1 (source), it affects only C1 during encryption.")
+print("   At the receiver, corrupted C1 will cause incorrect P1 and P2 upon decryption.")
