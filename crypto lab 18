@@ -1,0 +1,62 @@
+# DES Subkey Generation Demo
+# Each subkey (48 bits) = 24 bits from C + 24 bits from D
+
+# Permuted Choice 1 (PC-1) table: selects 56 bits from 64-bit key
+PC1 = [
+    57, 49, 41, 33, 25, 17, 9,
+    1, 58, 50, 42, 34, 26, 18,
+    10, 2, 59, 51, 43, 35, 27,
+    19, 11, 3, 60, 52, 44, 36,
+    63, 55, 47, 39, 31, 23, 15,
+    7, 62, 54, 46, 38, 30, 22,
+    14, 6, 61, 53, 45, 37, 29,
+    21, 13, 5, 28, 20, 12, 4
+]
+
+# Number of left shifts per round
+SHIFT_SCHEDULE = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
+
+def permute(block, table):
+    """Permutes bits of the input block based on table"""
+    return [block[i - 1] for i in table]
+
+def left_shift(bits, n):
+    """Circular left shift"""
+    return bits[n:] + bits[:n]
+
+def generate_subkeys(key_64bit):
+    # Step 1: Apply PC-1 to get 56-bit key
+    key_56bit = permute(key_64bit, PC1)
+    
+    # Step 2: Split into C and D halves (28 bits each)
+    C = key_56bit[:28]
+    D = key_56bit[28:]
+
+    subkeys = []
+
+    for i in range(16):
+        # Step 3: Shift halves
+        C = left_shift(C, SHIFT_SCHEDULE[i])
+        D = left_shift(D, SHIFT_SCHEDULE[i])
+        
+        # Step 4: Select 24 bits from C and 24 bits from D
+        # (simulating DES's PC-2 compression)
+        subkey = C[:24] + D[:24]
+        
+        subkeys.append(subkey)
+
+    return subkeys
+
+# --- MAIN PROGRAM ---
+if __name__ == "__main__":
+    # Example 64-bit key (8 bytes)
+    key_hex = "133457799BBCDFF1"
+    
+    # Convert hex key to binary list (64 bits)
+    key_bin = [int(b) for b in bin(int(key_hex, 16))[2:].zfill(64)]
+    
+    subkeys = generate_subkeys(key_bin)
+    
+    print("Generated 16 Subkeys (each 48 bits = 24+24):\n")
+    for i, k in enumerate(subkeys, 1):
+        print(f"K{i:02d}: {''.join(map(str, k))}")
